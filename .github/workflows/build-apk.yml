@@ -1,4 +1,4 @@
-name: Build SarvDivar APK
+name: Build SarvDivar Release
 
 on:
   workflow_dispatch:
@@ -25,11 +25,22 @@ jobs:
         with:
           gradle-version: '8.10'
 
-      - name: Build APK
-        run: gradle :app:assembleDebug
+      - name: Decode signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload-keystore.jks"
 
-      - name: Upload APK
+      - name: Build signed Release AAB
+        env:
+          KEYSTORE_FILE: ${{ runner.temp }}/upload-keystore.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          gradle :app:bundleRelease
+
+      - name: Upload Release AAB
         uses: actions/upload-artifact@v4
         with:
-          name: SarvDivar-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: SarvDivar-release-aab
+          path: app/build/outputs/bundle/release/app-release.aab
