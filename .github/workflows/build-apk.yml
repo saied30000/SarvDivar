@@ -31,6 +31,14 @@ jobs:
         run: |
           echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload-keystore.jks"
 
+      - name: Build signed Release APK
+        env:
+          KEYSTORE_FILE: ${{ runner.temp }}/upload-keystore.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          gradle :app:assembleRelease
+
       - name: Build signed Release AAB
         env:
           KEYSTORE_FILE: ${{ runner.temp }}/upload-keystore.jks
@@ -38,6 +46,12 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           gradle :app:bundleRelease
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SarvDivar-release-apk
+          path: app/build/outputs/apk/release/app-release.apk
 
       - name: Upload Release AAB
         uses: actions/upload-artifact@v4
