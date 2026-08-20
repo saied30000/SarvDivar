@@ -52,31 +52,38 @@ class MainActivity : ComponentActivity() {
                 fileChooserParams: FileChooserParams?
             ): Boolean {
 
-                // Cancel any previous unfinished request
-                filePathCallback?.onReceiveValue(null)
-                filePathCallback = null
+                // اگر انتخاب قبلی هنوز باز مانده، آن را لغو کن
+                this@MainActivity.filePathCallback?.onReceiveValue(null)
+                this@MainActivity.filePathCallback = null
 
-                if (filePath == null || fileChooserParams == null) {
+                if (filePath == null) {
                     return false
                 }
 
-                filePathCallback = filePath
+                this@MainActivity.filePathCallback = filePath
 
                 return try {
 
-                    val intent = fileChooserParams.createIntent()
+                    val intent = fileChooserParams?.createIntent()
 
-                    startActivityForResult(
-                        intent,
-                        FILE_CHOOSER_REQUEST_CODE
-                    )
+                    if (intent == null) {
+                        this@MainActivity.filePathCallback?.onReceiveValue(null)
+                        this@MainActivity.filePathCallback = null
+                        false
+                    } else {
 
-                    true
+                        startActivityForResult(
+                            intent,
+                            FILE_CHOOSER_REQUEST_CODE
+                        )
+
+                        true
+                    }
 
                 } catch (e: Exception) {
 
-                    filePathCallback?.onReceiveValue(null)
-                    filePathCallback = null
+                    this@MainActivity.filePathCallback?.onReceiveValue(null)
+                    this@MainActivity.filePathCallback = null
 
                     false
                 }
@@ -135,27 +142,79 @@ class MainActivity : ComponentActivity() {
         }
 
         val callback = filePathCallback
+
+        // خیلی مهم: callback را همین‌جا آزاد می‌کنیم
         filePathCallback = null
 
         if (callback == null) {
             return
         }
 
+        if (resultCode != Activity.RESULT_OK || data == null) {
+            callback.onReceiveValue(null)
+            return
+        }
+
         try {
 
-            val results: Array<Uri>? =
-                if (resultCode == Activity.RESULT_OK && data != null) {
+            val results = mutableListOf<Uri>()
 
+            // حالت اول: چند فایل یا عکس انتخاب شده
+            val clipData = data.clipData
+
+            if (clipData != null && clipData.itemCount > 0) {
+
+                for (i in 0 until clipData.itemCount) {
+
+                    val uri = clipData.getItemAt(i).uri
+
+                    if (uri != null) {
+                        results.add(uri)
+                    }
+                }
+            }
+
+            // حالت دوم: یک عکس انتخاب شده
+            if (results.isEmpty()) {
+
+                val uri = data.data
+
+                if (uri != null) {
+                    results.add(uri)
+                }
+            }
+
+            // حالت سوم: اگر دستگاه نتیجه را به روش استاندارد WebView داده باشد
+            if (results.isEmpty()) {
+
+                val parsedResults =
                     WebChromeClient.FileChooserParams.parseResult(
                         resultCode,
                         data
                     )
 
-                } else {
-                    null
-                }
+                if (parsedResults != null) {
 
-            callback.onReceiveValue(results)
+                    for (uri in parsedResults) {
+
+                        if (uri != null) {
+                            results.add(uri)
+                        }
+                    }
+                }
+            }
+
+            // نتیجه نهایی را مستقیماً به WebView بده
+            if (results.isNotEmpty()) {
+
+                callback.onReceiveValue(
+                    results.toTypedArray()
+                )
+
+            } else {
+
+                callback.onReceiveValue(null)
+            }
 
         } catch (e: Exception) {
 
