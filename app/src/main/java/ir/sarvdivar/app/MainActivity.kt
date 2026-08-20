@@ -22,6 +22,8 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val FILE_CHOOSER_REQUEST_CODE = 1001
+        private const val SUBMIT_LISTING_URL =
+            "https://sarvdivar.ir/submit-listing/"
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -38,7 +40,34 @@ class MainActivity : AppCompatActivity() {
         webView.settings.allowFileAccess = true
         webView.settings.allowContentAccess = true
 
-        webView.webViewClient = WebViewClient()
+        webView.webViewClient = object : WebViewClient() {
+
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+
+                if (url?.startsWith(SUBMIT_LISTING_URL) == true) {
+
+                    val css = """
+                        (function() {
+                            var style = document.getElementById('sarvdivar-app-offset');
+
+                            if (!style) {
+                                style = document.createElement('style');
+                                style.id = 'sarvdivar-app-offset';
+                                style.innerHTML = 
+                                    body {
+                                        padding-top: 8px !important;
+                                    }
+                                ;
+                                document.head.appendChild(style);
+                            }
+                        })();
+                    """.trimIndent()
+
+                    view?.evaluateJavascript(css, null)
+                }
+            }
+        }
 
         webView.webChromeClient = object : WebChromeClient() {
 
@@ -90,48 +119,3 @@ class MainActivity : AppCompatActivity() {
 
             insets
         }
-
-        onBackPressedDispatcher.addCallback(
-            this,
-            object : OnBackPressedCallback(true) {
-                override fun handleOnBackPressed() {
-                    if (webView.canGoBack()) {
-                        webView.goBack()
-                    } else {
-                        finish()
-                    }
-                }
-            }
-        )
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(
-        requestCode: Int,
-        resultCode: Int,
-        data: Intent?
-    ) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
-
-            val results: Array<Uri>? =
-                if (resultCode == Activity.RESULT_OK) {
-
-                    data?.clipData?.let { clipData ->
-                        Array(clipData.itemCount) { index ->
-                            clipData.getItemAt(index).uri
-                        }
-                    } ?: data?.data?.let {
-                        arrayOf(it)
-                    }
-
-                } else {
-                    null
-                }
-
-            filePathCallback?.onReceiveValue(results)
-            filePathCallback = null
-        }
-    }
-}
