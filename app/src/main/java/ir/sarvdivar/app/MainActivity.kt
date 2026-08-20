@@ -8,6 +8,7 @@ import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.core.view.ViewCompat
@@ -28,13 +29,13 @@ class MainActivity : ComponentActivity() {
 
         webView = WebView(this)
 
+        // WebView settings
         webView.settings.javaScriptEnabled = true
         webView.settings.domStorageEnabled = true
         webView.settings.allowFileAccess = true
         webView.settings.allowContentAccess = true
 
         webView.webViewClient = object : WebViewClient() {
-
             override fun onPageFinished(
                 view: WebView?,
                 url: String?
@@ -51,25 +52,32 @@ class MainActivity : ComponentActivity() {
                 fileChooserParams: FileChooserParams?
             ): Boolean {
 
+                // Cancel any previous unfinished request
                 filePathCallback?.onReceiveValue(null)
+                filePathCallback = null
+
+                if (filePath == null || fileChooserParams == null) {
+                    return false
+                }
+
                 filePathCallback = filePath
 
                 return try {
-                    val intent = fileChooserParams?.createIntent()
 
-                    if (intent != null) {
-                        startActivityForResult(
-                            intent,
-                            FILE_CHOOSER_REQUEST_CODE
-                        )
-                        true
-                    } else {
-                        filePathCallback = null
-                        false
-                    }
+                    val intent = fileChooserParams.createIntent()
+
+                    startActivityForResult(
+                        intent,
+                        FILE_CHOOSER_REQUEST_CODE
+                    )
+
+                    true
 
                 } catch (e: Exception) {
+
+                    filePathCallback?.onReceiveValue(null)
                     filePathCallback = null
+
                     false
                 }
             }
@@ -87,7 +95,7 @@ class MainActivity : ComponentActivity() {
 
             view.setPadding(
                 0,
-                               systemBars.top,
+                systemBars.top,
                 0,
                 systemBars.bottom
             )
@@ -122,9 +130,20 @@ class MainActivity : ComponentActivity() {
             data
         )
 
-        if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
+        if (requestCode != FILE_CHOOSER_REQUEST_CODE) {
+            return
+        }
 
-            val results =
+        val callback = filePathCallback
+        filePathCallback = null
+
+        if (callback == null) {
+            return
+        }
+
+        try {
+
+            val results: Array<Uri>? =
                 if (resultCode == Activity.RESULT_OK && data != null) {
 
                     WebChromeClient.FileChooserParams.parseResult(
@@ -136,8 +155,21 @@ class MainActivity : ComponentActivity() {
                     null
                 }
 
-            filePathCallback?.onReceiveValue(results)
-            filePathCallback = null
+            callback.onReceiveValue(results)
+
+        } catch (e: Exception) {
+
+            callback.onReceiveValue(null)
         }
+    }
+
+    override fun onDestroy() {
+
+        filePathCallback?.onReceiveValue(null)
+        filePathCallback = null
+
+        webView.destroy()
+
+        super.onDestroy()
     }
 }
