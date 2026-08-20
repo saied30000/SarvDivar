@@ -23,23 +23,23 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // ایجاد WebView
         val webView = WebView(this)
 
+        // فعال‌سازی تنظیمات مورد نیاز
         webView.settings.javaScriptEnabled = true
         webView.settings.domStorageEnabled = true
         webView.settings.allowFileAccess = true
         webView.settings.allowContentAccess = true
 
+        // تنظیم WebViewClient
         webView.webViewClient = object : WebViewClient() {
-
-            override fun onPageFinished(
-                view: WebView?,
-                url: String?
-            ) {
+            override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
             }
         }
 
+        // تنظیم WebChromeClient برای آپلود فایل
         webView.webChromeClient = object : WebChromeClient() {
 
             override fun onShowFileChooser(
@@ -72,23 +72,16 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // بارگذاری سایت
         webView.loadUrl("https://sarvdivar.ir/")
 
+        // نمایش WebView
         setContentView(webView)
 
+        // تنظیم padding برای رفع مشکل سایز صفحه
         ViewCompat.setOnApplyWindowInsetsListener(webView) { view, insets ->
-
-            val systemBars = insets.getInsets(
-                WindowInsetsCompat.Type.systemBars()
-            )
-
-            view.setPadding(
-                0,
-                systemBars.top,
-                0,
-                systemBars.bottom
-            )
-
+            // حذف padding اضافی برای نمایش کامل صفحه
+            view.setPadding(0, 0, 0, 0)
             insets
         }
     }
@@ -117,13 +110,14 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onBackPressed() {
-
+        // پیدا کردن WebView
         val webView = findViewById<WebView>(android.R.id.content)
-            ?.findViewById<WebView>(android.R.id.content)
 
-        if (webView != null && webView.canGoBack()) {
+        // اگر WebView بتواند به صفحه قبل برگردد، این کار را می‌کند
+        if (webView.canGoBack()) {
             webView.goBack()
         } else {
+            // در غیر این صورت، برنامه بسته می‌شود
             super.onBackPressed()
         }
     }
