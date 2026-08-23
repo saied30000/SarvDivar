@@ -5,7 +5,7 @@
 
     <application
         android:allowBackup="true"
-        android:label="سرو دیوار"
+        android:label="سرو بازار"
         android:icon="@drawable/icon_sarvdivar"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
